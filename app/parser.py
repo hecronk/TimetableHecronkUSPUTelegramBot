@@ -31,21 +31,13 @@ class Parser:
             soup = BeautifulSoup(Parser._get_html(url + group).text, 'html.parser')
         except ConnectionError:
             return "Can't Parse!"
-        temp = soup.find('div', attrs={'class': 'rasp-list rasp-list-group'}).text.split('\n' * 6)
-        result = {
-            'date': temp[0].split('\n\n')[1],
-            'day_of_the_week': temp[0].split('\n\n')[2],
-            'schedule': list(),
-        }
-        for i in temp[0].split('\n\n\n'):
-            times = 0
-            if i != ('\n\n' + result['date'] + '\n\n' + result['day_of_the_week']) and times == 0:
-                times += 1
-                result['schedule'].append({'time': i.split('\n\n')[0],
-                                           'lesson_name': i.split('\n')[2].split('(')[0][:-1],
-                                           'auditorium': i.split('\n')[2].split(')')[-1][1:],
-                                           'teacher': i.split('\n')[3]})
-        return result
+        stud_r = soup.find('div', attrs={'class': 'stud-r'})
+        update = stud_r.find('script').get_text().split(r"$('.stud-r .rasp-update').html('")[1][:-8]
+        items = stud_r.find_all('div', attrs={'class': 'rasp-item'})[0]  # paste here day
+        items.find('span', attrs={'class': 'rasp-day'}).getText()
+        items.find('div', attrs={'class': 'rasp-week'}).getText()
+        items.find_all('span', attrs={'class': 'para-time'})[0].getText()  # paste here para time by index
+        return update
 
 
 print(Parser.get_content(url=ParserConfig.URL, group='РиА-1931'))
