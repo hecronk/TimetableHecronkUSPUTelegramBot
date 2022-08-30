@@ -5,7 +5,7 @@ from config import ParserConfig
 
 class Parser:
     @staticmethod
-    def _get_html(url):
+    def _get_html(url) -> requests:
         html = requests.get(url, headers=ParserConfig.HEADERS)
         if Parser._server_is_respond(html):
             return html
@@ -13,24 +13,26 @@ class Parser:
             raise ConnectionError('Status code = {code}'.format(code=html.status_code))
 
     @staticmethod
-    def _server_is_respond(html):
+    def _server_is_respond(html) -> bool:
         return True if html.status_code == 200 else False
 
     @staticmethod
-    def get_groups(url):
+    def _get_soup(url: str) -> BeautifulSoup or str:
         try:
             soup = BeautifulSoup(Parser._get_html(url).text, 'html.parser')
+            return soup
         except ConnectionError:
             return "Can't Parse!"
+
+    @staticmethod
+    def get_groups(url: str) -> list:
+        soup = Parser._get_soup(url=url)
         groups = soup.find('select', attrs={'name': 'group_name'})
         return groups.text.split('\n')[2:-2]
 
     @staticmethod
     def get_available_days(url: str, group: str):
-        try:
-            soup = BeautifulSoup(Parser._get_html(url + group).text, 'html.parser')
-        except ConnectionError:
-            return "Can't Parse!"
+        soup = Parser._get_soup(url=url+group)
         stud_r = soup.find('div', attrs={'class': 'stud-r'})
         items = stud_r.find_all('div', attrs={'class': 'rasp-item'})
         days = list()
@@ -43,10 +45,7 @@ class Parser:
 
     @staticmethod
     def get_content(url: str, group: str, day: dict):
-        try:
-            soup = BeautifulSoup(Parser._get_html(url + group).text, 'html.parser')
-        except ConnectionError:
-            return "Can't Parse!"
+        soup = Parser._get_soup(url=url+group)
         stud_r = soup.find('div', attrs={'class': 'stud-r'})
         items = stud_r.find_all('div', attrs={'class': 'rasp-item'})[Parser.get_available_days(url, group).index(day)]  # paste here day
         lessons_count = len(items.find_all('span', attrs={'class': 'para-time'}))
@@ -66,5 +65,6 @@ class Parser:
         return result
 
 
-# print(Parser.get_available_days(url=ParserConfig.URL, group='ХОР-1931oz'))
-print(Parser.get_content(url=ParserConfig.URL, group='ФК-2132', day={'date': '05 сентября', 'week': 'Пн'}))
+# EXAMPLES
+# print(Parser.get_available_days(url=ParserConfig.URL, group='ФК-2132'))
+# print(Parser.get_content(url=ParserConfig.URL, group='ФК-2132', day={'date': '05 сентября', 'week': 'Пн'}))
