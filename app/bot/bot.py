@@ -14,8 +14,9 @@ async def start(message: types.Message):
     for i in range(len(groups)):
         button = types.InlineKeyboardButton(groups[i], callback_data=groups[i])
         markup.add(button)
-    await message.reply('Привет! Это бот расписания УрГПУ! Выбери свою группу. Позднее ты сможешь ее изменить в настройках',
+    await message.reply('Привет! Это бот расписания УрГПУ! Выбери свою группу ↓. Позднее ты сможешь ее изменить в настройках',
                         reply_markup=markup)
+    await message.answer('Привет! Это бот расписания УрГПУ! Выбери свою группу ↑. Позднее ты сможешь ее изменить в настройках')
 
 
 # @dp.callback_query_handler
