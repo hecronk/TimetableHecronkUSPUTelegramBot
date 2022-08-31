@@ -67,4 +67,4 @@ class Parser:
 
 # EXAMPLES
 # print(Parser.get_available_days(url=ParserConfig.URL, group='ФК-2132'))
-# print(Parser.get_content(url=ParserConfig.URL, group='ФК-2132', day={'date': '05 сентября', 'week': 'Пн'}))
+# print(Parser.get_content(url=ParserConfig.URL, group='ГИ-2031', day={'date': '01 сентября', 'week': 'Чт'}))
