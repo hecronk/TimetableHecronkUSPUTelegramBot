@@ -41,7 +41,6 @@ async def start(message: types.Message):
             'Привет! Это бот расписания УрГПУ! Выбери свою группу ↓. Ты всегда сможешь ее изменить в настройках',
             reply_markup=markups[0])
     else:
-        await message.delete()
         await message.answer(f'С возвращением!'
                              f' Ваша группа {str(session.query(User).filter(User.telegram_id == message.from_user.id).first().group)}',
                              reply_markup=get_start_markup())
@@ -70,7 +69,6 @@ async def callback_handler(callback: types.CallbackQuery):
             group = session.query(User).filter(User.telegram_id == callback.from_user.id).first().group
             await callback.message.answer(f'Установлена группа {group}. Для изменения группы перейдите в настройки',
                                           reply_markup=get_start_markup())
-            await callback.message.delete()
         elif callback.data in str(Parser.get_available_days(ParserConfig.URL, group=str(
                 session.query(User).filter(User.telegram_id == callback.from_user.id).first().group))):
             day = ast.literal_eval(callback.data)
@@ -86,17 +84,14 @@ async def callback_handler(callback: types.CallbackQuery):
                                                                                       'subgroup'] != '' else '') + '\n' + \
                           content['content'][i]['teacher'] + '\n' * 2
             await callback.message.answer(result)
-            await callback.message.delete()
         elif callback.data == '/start':
             await start(message=callback.message)
-            await callback.message.delete()
         elif callback.data == '/menu':
             await callback.message.delete()
 
 
 @dp.message_handler(content_types='text')
 async def main(message: types.Message):
-    await message.delete()
     if message.text == 'Расписание':
         group = str(session.query(User).filter(User.telegram_id == message.from_user.id).first().group)
         days = Parser.get_available_days(url=ParserConfig.URL, group=group)
