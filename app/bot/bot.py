@@ -1,5 +1,7 @@
+import aiogram.utils.exceptions
 from aiogram import Bot, Dispatcher, executor, types
 import ast
+import itertools
 
 from config import TelegramBotConfig, ParserConfig
 from app.parser.parser import Parser
@@ -17,29 +19,49 @@ def get_start_markup() -> types.ReplyKeyboardMarkup:
     return markup
 
 
+def get_current_markups(page: int) -> list:
+    groups = Parser.get_groups(ParserConfig.URL)
+    list_of_groups = itertools.zip_longest(*(iter(groups),) * 6)
+    markups = list()
+    for group in list_of_groups:
+        markup = types.InlineKeyboardMarkup(row_width=2)
+        for i in range(6):
+            markup.add(types.InlineKeyboardButton(group[i], callback_data=groups[page*6 + i]))
+        markups.append(markup)
+    return markups
+
+
 @dp.message_handler(commands='start')
 async def start(message: types.Message):
     if not session.query(User).filter(User.telegram_id == message.from_user.id).first():
-        groups = Parser.get_groups(ParserConfig.URL)
-        markup = types.InlineKeyboardMarkup()
-        for i in range(len(groups)):
-            button = types.InlineKeyboardButton(groups[i], callback_data=groups[i])
-            markup.add(button)
+        markups = get_current_markups(0)
+        markups[0].add(types.InlineKeyboardButton('Назад', callback_data='group_page=0'),
+                   types.InlineKeyboardButton('Вперед', callback_data='group_page=1'))
         await message.reply(
             'Привет! Это бот расписания УрГПУ! Выбери свою группу ↓. Ты всегда сможешь ее изменить в настройках',
-            reply_markup=markup)
+            reply_markup=markups[0])
     else:
         await message.delete()
         await message.answer(f'С возвращением!'
-                             f' Ваша группа {str(session.query(User).filter(User.telegram_id == message.from_user.id).first().group)}'
-                             , reply_markup=get_start_markup())
+                             f' Ваша группа {str(session.query(User).filter(User.telegram_id == message.from_user.id).first().group)}',
+                             reply_markup=get_start_markup())
 
 
 @dp.callback_query_handler()
 async def callback_handler(callback: types.CallbackQuery):
-    await callback.answer('Подождите, идет загрузка ...', show_alert=True)
     if callback.message:
-        if callback.data in Parser.get_groups(ParserConfig.URL):
+        if 'group_page=' in callback.data:
+            number = int(callback.data.split('=')[1])
+            if number in range(0, len(get_current_markups(page=number))-1):
+                markup = get_current_markups(number)[number]
+                markup.add(types.InlineKeyboardButton(f'Назад', callback_data=f'group_page={number-1}'),
+                                        types.InlineKeyboardButton(f'Вперед', callback_data=f'group_page={number+1}'))
+                try:
+                    await callback.message.edit_reply_markup(reply_markup=markup)
+                except aiogram.utils.exceptions.MessageNotModified:
+                    pass
+        elif callback.data in Parser.get_groups(ParserConfig.URL):
+            await callback.answer('Подождите, идет загрузка ...', show_alert=True)
             if not session.query(User).filter(User.telegram_id == callback.from_user.id).first():
                 user = User(telegram_id=callback.from_user.id, group=callback.data)
                 session.add(user)
@@ -53,13 +75,18 @@ async def callback_handler(callback: types.CallbackQuery):
         elif callback.data in str(Parser.get_available_days(ParserConfig.URL, group=str(
                 session.query(User).filter(User.telegram_id == callback.from_user.id).first().group))):
             day = ast.literal_eval(callback.data)
+            await callback.answer('Подождите, идет загрузка ...', show_alert=True)
             content = Parser.get_content(url=ParserConfig.URL,
                                          group=str(session.query(User).filter(
                                              User.telegram_id == callback.from_user.id).first().group),
                                          day=day)
-            result = content['update'] + '\n' + day['week'] + ' ' + day['date'] + '\n'*2
+            result = content['update'] + '\n' + day['week'] + ' ' + day['date'] + '\n' * 2
             for i in range(len(content['content'])):
-                result += 'Время: ' + content['content'][i]['time'] + '\n' + 'Предмет: ' + content['content'][i]['lesson_name + auditorium'] + ('\n' + content['content'][i]['subgroup'].title() if content['content'][i]['subgroup'] != '' else '') + '\n' + content['content'][i]['teacher'] + '\n'*2
+                result += 'Время: ' + content['content'][i]['time'] + '\n' + 'Предмет: ' + content['content'][i][
+                    'lesson_name + auditorium'] + (
+                              '\n' + content['content'][i]['subgroup'].title() if content['content'][i][
+                                                                                      'subgroup'] != '' else '') + '\n' + \
+                          content['content'][i]['teacher'] + '\n' * 2
             await callback.message.answer(result)
             await callback.message.delete()
         elif callback.data == '/start':
