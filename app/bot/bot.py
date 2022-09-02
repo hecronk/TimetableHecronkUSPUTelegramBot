@@ -61,7 +61,6 @@ async def callback_handler(callback: types.CallbackQuery):
                 except aiogram.utils.exceptions.MessageNotModified:
                     pass
         elif callback.data in Parser.get_groups(ParserConfig.URL):
-            await callback.answer('Подождите, идет загрузка ...', show_alert=True)
             if not session.query(User).filter(User.telegram_id == callback.from_user.id).first():
                 user = User(telegram_id=callback.from_user.id, group=callback.data)
                 session.add(user)
@@ -75,7 +74,6 @@ async def callback_handler(callback: types.CallbackQuery):
         elif callback.data in str(Parser.get_available_days(ParserConfig.URL, group=str(
                 session.query(User).filter(User.telegram_id == callback.from_user.id).first().group))):
             day = ast.literal_eval(callback.data)
-            await callback.answer('Подождите, идет загрузка ...', show_alert=True)
             content = Parser.get_content(url=ParserConfig.URL,
                                          group=str(session.query(User).filter(
                                              User.telegram_id == callback.from_user.id).first().group),
