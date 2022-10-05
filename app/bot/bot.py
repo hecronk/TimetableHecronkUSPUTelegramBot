@@ -99,7 +99,10 @@ async def main(message: types.Message):
         for i in range(len(days)):
             button = types.InlineKeyboardButton(days[i]['date'] + ' - ' + days[i]['week'], callback_data=str(days[i]))
             markup.add(button)
-        await message.answer('Выбери день:', reply_markup=markup)
+        if len(days) != 0:
+            await message.answer('Выбери день:', reply_markup=markup)
+        else:
+            await message.answer('Нет доступных дней для выбора!')
     if message.text == 'Настройки':
         markup = types.InlineKeyboardMarkup()
         change_group_button = types.InlineKeyboardButton('Изменить группу', callback_data='/start')
